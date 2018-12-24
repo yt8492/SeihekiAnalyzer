@@ -36,7 +36,7 @@ fun main() {
 
     Thread.sleep(1000)
 
-    val thisMonthHistoryCookies = Jsoup.connect(mainUrl)
+    val historyCookies = Jsoup.connect(mainUrl)
         .followRedirects(true)
         .userAgent("Mozilla")
         .cookies(cookies)
@@ -47,25 +47,15 @@ fun main() {
     Thread.sleep(1000)
 
     val thisMonthHistory = Jsoup.connect(mainUrl)
-        .cookies(thisMonthHistoryCookies)
+        .cookies(historyCookies)
         .userAgent("Mozilla")
         .get()
         .body()
 
     Thread.sleep(1000)
 
-    val pastMonthHistoryCookies = Jsoup.connect("$mainUrl/complete")
-        .followRedirects(true)
-        .userAgent("Mozilla")
-        .cookies(cookies)
-        .method(Connection.Method.POST)
-        .execute()
-        .cookies()
-
-    Thread.sleep(1000)
-
     val pastMonthHistory = Jsoup.connect("$mainUrl/complete")
-        .cookies(pastMonthHistoryCookies)
+        .cookies(historyCookies)
         .data("_layout", "mypage_userbuy_complete")
         .data("_form_id", "mypageUserbuyCompleteForm")
         .data("_site", "maniax")
@@ -97,6 +87,7 @@ fun main() {
 
     urls.forEach { url ->
         try {
+            println("Analyzing: $url ...")
             val voicePage = Jsoup.connect(url)
                 .userAgent("Mozilla")
                 .get()
