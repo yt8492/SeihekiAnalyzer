@@ -6,10 +6,12 @@ fun main() {
     val loginUrl = "https://login.dlsite.com/login"
     val mainUrl = "https://ssl.dlsite.com/maniax/mypage/userbuy"
 
+    val console = System.console() ?: null
+
     print("UserId: ")
-    val userId = readLine()
+    val userId = console?.readLine() ?: readLine()
     print("Password: ")
-    val password = readLine()
+    val password = console?.readPassword()?.joinToString("") ?: readLine()
 
     val res1 = Jsoup.connect(loginUrl)
         .method(Connection.Method.GET)
@@ -32,6 +34,7 @@ fun main() {
         .method(Connection.Method.POST)
         .execute()
         .cookies()
+
     println(cookies.map { "${it.key}: ${it.value}" }.joinToString("\n"))
 
     Thread.sleep(1000)
@@ -84,6 +87,7 @@ fun main() {
     println(urls.joinToString("\n"))
 
     val genreCnt = mutableMapOf<String, Int>()
+    var totalCnt = 0
 
     urls.forEach { url ->
         try {
@@ -105,11 +109,12 @@ fun main() {
                 }
                 genreCnt[tag] = cnt
             }
+            totalCnt++
         } catch (e: SocketTimeoutException) {
             println("error: $url")
         } finally {
             Thread.sleep(500)
         }
     }
-    println(genreCnt.map { it.toPair() }.sortedByDescending { it.second }.joinToString("\n"){"%s: %.2f %%".format(it.first, (it.second.toDouble() / urls.size) * 100)})
+    println(genreCnt.map { it.toPair() }.sortedByDescending { it.second }.joinToString("\n"){"%s: %.2f %%".format(it.first, (it.second.toDouble() / totalCnt) * 100)})
 }
