@@ -1,6 +1,7 @@
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 fun main() {
     val loginUrl = "https://login.dlsite.com/login"
@@ -9,12 +10,11 @@ fun main() {
     val console = System.console() ?: null
 
     print("UserId: ")
-    val userId = console?.readLine() ?: readLine()
+    val userId = console?.readLine() ?: readLine() ?: return
     print("Password: ")
-    val password = console?.readPassword()?.joinToString("") ?: readLine()
+    val password = console?.readPassword()?.joinToString("") ?: readLine() ?: return
 
-    val res1 = Jsoup.connect(loginUrl)
-        .method(Connection.Method.GET)
+    val res1 = getConnection(loginUrl)
         .execute()
     val welcomePage = res1.parse()
     val welcomeCookie = res1.cookies()
@@ -22,51 +22,32 @@ fun main() {
     val tokenKey = token.attr("name")
     val tokenValue = token.attr("value")
 
-    Thread.sleep(1000)
+    val cookies = requestByPost(loginUrl, cookies = welcomeCookie, data = mapOf(
+        tokenKey to tokenValue,
+        "login_id" to userId,
+        "password" to password
+    )).cookies()
 
-    val cookies = Jsoup.connect(loginUrl)
-        .data(tokenKey, tokenValue)
-        .data("login_id", userId)
-        .data("password", password)
-        .cookies(welcomeCookie)
-        .followRedirects(false)
-        .userAgent("Mozilla")
-        .method(Connection.Method.POST)
-        .execute()
-        .cookies()
+    val historyCookies = requestByPost(mainUrl, cookies = cookies).cookies()
 
-    println(cookies.map { "${it.key}: ${it.value}" }.joinToString("\n"))
+    if (cookies.containsKey("PHPSESSID")) {
+        println("ログインに成功しました。")
+    } else {
+        println("ログインに失敗しました。")
+        return
+    }
 
-    Thread.sleep(1000)
+    println("購入履歴取得中...")
 
-    val historyCookies = Jsoup.connect(mainUrl)
-        .followRedirects(true)
-        .userAgent("Mozilla")
-        .cookies(cookies)
-        .method(Connection.Method.POST)
-        .execute()
-        .cookies()
+    val thisMonthHistory = requestByGet(mainUrl, cookies = historyCookies).parse()
 
-    Thread.sleep(1000)
-
-    val thisMonthHistory = Jsoup.connect(mainUrl)
-        .cookies(historyCookies)
-        .userAgent("Mozilla")
-        .get()
-        .body()
-
-    Thread.sleep(1000)
-
-    val pastMonthHistory = Jsoup.connect("$mainUrl/complete")
-        .cookies(historyCookies)
-        .data("_layout", "mypage_userbuy_complete")
-        .data("_form_id", "mypageUserbuyCompleteForm")
-        .data("_site", "maniax")
-        .data("_view", "input")
-        .data("start", "all")
-        .userAgent("Mozilla")
-        .get()
-        .body()
+    val pastMonthHistory = requestByGet(mainUrl, cookies = historyCookies, data = mapOf(
+        "_layout" to "mypage_userbuy_complete",
+        "_form_id" to "mypageUserbuyCompleteForm",
+        "_site" to "maniax",
+        "_view" to "input",
+        "start" to "all"
+    )).parse()
 
     Thread.sleep(1000)
 
@@ -84,37 +65,89 @@ fun main() {
 
     val urls = urls1 + urls2
 
-    println(urls.joinToString("\n"))
+    println(
+        urls.mapIndexed { index, url ->
+            "${"%3d".format(index + 1)}: $url"
+        }.joinToString("\n")
+    )
 
     val genreCnt = mutableMapOf<String, Int>()
     var totalCnt = 0
 
     urls.forEach { url ->
-        try {
-            println("Analyzing: $url ...")
-            val voicePage = Jsoup.connect(url)
-                .userAgent("Mozilla")
-                .get()
-                .body()
-            val rows = voicePage.getElementById("work_outline").select("tr")
-            val tags = rows.find { row ->
-                row.child(0).text() == "ジャンル"
-            }?.getElementsByClass("main_genre")?.select("[href]")?.text()?.split(" ".toRegex()) ?: listOf()
-            tags.forEach { tag ->
-                var cnt = genreCnt[tag]
-                cnt = if (cnt == null) {
-                    1
-                } else {
-                    cnt + 1
-                }
-                genreCnt[tag] = cnt
-            }
+        if (analyzeTag(genreCnt, url)) {
             totalCnt++
-        } catch (e: SocketTimeoutException) {
-            println("error: $url")
-        } finally {
-            Thread.sleep(500)
         }
     }
-    println(genreCnt.map { it.toPair() }.sortedByDescending { it.second }.joinToString("\n"){"%s: %.2f %%".format(it.first, (it.second.toDouble() / totalCnt) * 100)})
+
+    println("\n作品数: ${urls.size}, 失敗: ${urls.size - totalCnt}\n")
+    println(
+        genreCnt.map { it.toPair() }
+            .sortedByDescending { it.second }
+            .joinToString("\n") {
+                "%s: %.2f %%".format(it.first, (it.second.toDouble() / totalCnt) * 100)
+            }
+    )
+}
+
+fun analyzeTag(genreCnt: MutableMap<String, Int>, url: String, failurCnt: Int = 0): Boolean {
+    try {
+        when {
+            failurCnt == 0 -> println("Analyzing: $url")
+            failurCnt < 5 -> println("Retrying: $url")
+            else -> {
+                println("Error: $url")
+                return false
+            }
+        }
+        val voicePage = requestByGet(url).parse()
+        val rows = voicePage.getElementById("work_outline").select("tr")
+        val tags = rows.find { row ->
+            row.child(0).text() == "ジャンル"
+        }?.getElementsByClass("main_genre")?.select("[href]")?.text()?.split(" ".toRegex()) ?: listOf()
+        tags.forEach { tag ->
+            var cnt = genreCnt[tag]
+            cnt = if (cnt == null) {
+                1
+            } else {
+                cnt + 1
+            }
+            genreCnt[tag] = cnt
+        }
+        return true
+    } catch (e: SocketTimeoutException) {
+        return analyzeTag(genreCnt, url, failurCnt + 1)
+    } catch (e: UnknownHostException) {
+        return analyzeTag(genreCnt, url, failurCnt + 1)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return analyzeTag(genreCnt, url, failurCnt + 1)
+    }
+}
+
+fun requestByGet(url: String, cookies: Map<String, String>? = null, data: Map<String, String>? = null): Connection.Response {
+    var connection = getConnection(url)
+    if (cookies != null) {
+        connection = connection.cookies(cookies)
+    }
+    if (data != null) {
+        connection = connection.data(data)
+    }
+    return connection.method(Connection.Method.GET).execute()
+}
+
+fun requestByPost(url: String, cookies: Map<String, String>? = null, data: Map<String, String>? = null): Connection.Response {
+    var connection = getConnection(url)
+    if (cookies != null) {
+        connection = connection.cookies(cookies)
+    }
+    if (data != null) {
+        connection = connection.data(data)
+    }
+    return connection.method(Connection.Method.POST).execute()
+}
+
+fun getConnection(url: String): Connection {
+    Thread.sleep(500)
+    return Jsoup.connect(url).timeout(100000)
 }
