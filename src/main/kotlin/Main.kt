@@ -49,8 +49,6 @@ fun main() {
         "start" to "all"
     )).parse()
 
-    Thread.sleep(1000)
-
     val urls1 = thisMonthHistory
         .getElementsByClass("work_name")
         .map {
@@ -148,6 +146,6 @@ fun requestByPost(url: String, cookies: Map<String, String>? = null, data: Map<S
 }
 
 fun getConnection(url: String): Connection {
-    Thread.sleep(500)
+    Thread.sleep(1000)
     return Jsoup.connect(url).timeout(100000)
 }
