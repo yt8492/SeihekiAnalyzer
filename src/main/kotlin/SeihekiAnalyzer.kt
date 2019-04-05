@@ -1,15 +1,10 @@
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
-class SeihekiAnalyzer {
+class SeihekiAnalyzer private constructor(private val loginCookies: Map<String, String>) {
 
-    private val loginCookies: Map<String, String>
     private val genreCnt = mutableMapOf<String, Int>()
     private var totalCnt = 0
-
-    private constructor(loginCookies: Map<String, String>) {
-        this.loginCookies = loginCookies
-    }
 
     fun exec(callback: Callback) {
         callback.onStartUrlFetch()
