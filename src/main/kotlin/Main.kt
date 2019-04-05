@@ -21,7 +21,7 @@ fun main() {
             }
 
             override fun onAnalyzingTag(url: String, retryFlg: Boolean) {
-                if (retryFlg) {
+                if (!retryFlg) {
                     println("Analyzing: $url")
                 } else {
                     println("Retrying: $url")
