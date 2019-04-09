@@ -33,7 +33,12 @@ class SeihekiAnalyzer private constructor(private val loginCookies: Map<String, 
             .flatMap { d ->
                 d.getElementsByClass("work_name")
                 .map { e ->
-                    e.select("[href]").toString().split("\"")[1]
+                    try {
+                        e.select("[href]").toString().split("\"")[1]
+                    } catch (error: IndexOutOfBoundsException) {
+                        println("error: ${e.select("[href]").toString()}")
+                        ""
+                    }
                 }
             }
         return userBuyHistoryUrls
