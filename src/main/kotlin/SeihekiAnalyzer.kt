@@ -36,10 +36,10 @@ class SeihekiAnalyzer private constructor(private val loginCookies: Map<String, 
                     try {
                         e.select("[href]").toString().split("\"")[1]
                     } catch (error: IndexOutOfBoundsException) {
-                        null
+                        ""
                     }
                 }
-            }.filterNotNull()
+            }
         return userBuyHistoryUrls
     }
 
@@ -73,8 +73,7 @@ class SeihekiAnalyzer private constructor(private val loginCookies: Map<String, 
         } catch (e: UnknownHostException) {
             return analyzeTag(url, callback, failureCnt + 1)
         } catch (e: Exception) {
-            e.printStackTrace()
-            return analyzeTag(url, callback, failureCnt + 1)
+            return analyzeTag(url, callback, 5)
         }
     }
 
