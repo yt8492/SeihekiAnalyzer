@@ -59,12 +59,8 @@ class SeihekiAnalyzer private constructor(private val loginCookies: Map<String, 
                 row.child(0).text() == "ジャンル"
             }?.getElementsByClass("main_genre")?.select("[href]")?.text()?.split(" ".toRegex()) ?: listOf()
             tags.forEach { tag ->
-                var cnt = genreCnt[tag]
-                cnt = if (cnt == null) {
-                    1
-                } else {
-                    cnt + 1
-                }
+                var cnt = genreCnt[tag] ?: 0
+                cnt++
                 genreCnt[tag] = cnt
             }
             return true
