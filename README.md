@@ -9,8 +9,4 @@ DLsiteの購入履歴からあなたの性癖暴きます
 
 コマンドラインから `java -jar SeihekiAnalyzer-v1.07.jar` を実行、指示に従いユーザーIDとパスワードを入力する
 
-## docker runでのやり方
-
-コマンドラインから `docker run -it --rm luecy1/seiheki_analyzer` を実行、指示に従いユーザーIDとパスワードを入力する
-
 購入履歴を分析して購入した割合の多い順にジャンルが表示されるぞ！
