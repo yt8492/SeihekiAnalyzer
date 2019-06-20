@@ -1,11 +1,19 @@
+import java.net.UnknownHostException
+
 fun main() {
+    try {
+        JsoupUtils.getConnection("https://www.dlsite.com/index.html", 0).get()
+    } catch (e: UnknownHostException) {
+        println("DLsiteへの接続が失敗しました。ネットワークの状態を確認してください。")
+        return
+    }
+
     val console = System.console() ?: null
 
     print("UserId: ")
     val userId = console?.readLine() ?: readLine() ?: ""
     print("Password: ")
     val password = console?.readPassword()?.joinToString("") ?: readLine() ?: ""
-
     SeihekiAnalyzer.login(userId, password, { println("ログインに成功しました。") }, { println("ログインに失敗しました。") })
         ?.exec(object : SeihekiAnalyzer.Callback {
             override fun onStartUrlFetch() {

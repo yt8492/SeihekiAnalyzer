@@ -27,8 +27,8 @@ object JsoupUtils {
     }
 
     @JvmStatic
-    fun getConnection(url: String): Connection {
-        Thread.sleep(1000)
+    fun getConnection(url: String, sleepTimeMilliSec: Long = 1000): Connection {
+        Thread.sleep(sleepTimeMilliSec)
         return Jsoup.connect(url).timeout(100000).maxBodySize(0)
     }
 }
